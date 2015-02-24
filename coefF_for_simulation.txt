@@ -1,0 +1,13 @@
+age	40age	41age	42age	43age	44age	45age	46age	47age	48age	49age	50age	51age	52age	53age	54age	55age	56age	57age	58age	59age	60age	61age	62age	63age	64age	65age	66age	67age	68age	69age	70
+Sex	Femalef.2734.0.0	[0,1]f.2734.0.0	(1,2]f.2734.0.0	(2,4]f.2734.0.0	(4,22]f.1239.0.0	Nof.1239.0.0	Yes, on most or all daysf.1239.0.0	Only occasionallyf.1249.0.0	Smoked on most or all daysf.1249.0.0	Smoked occasionallyf.1249.0.0	Just tried once or twicef.1249.0.0	I have never smokedf.1249.0.0	I'm a smokerf.2178.0.0	Excellentf.2178.0.0	Goodf.2178.0.0	Fairf.2178.0.0	Poorf.2188.0.0	Nof.2188.0.0	Yesf.924.0.0	Slow pacef.924.0.0	Steady average pacef.924.0.0	Brisk pacef.924.0.0	None of the abovef.2090.0.0	Nof.2090.0.0	Yesf.2453.0.0	Nof.2453.0.0	Yesf.6145.0.l1	None of the above
+f.6145.0.l1	0f.6145.0.l2	Serious illness, injury or assault to yourself
+f.6145.0.l2	0f.6145.0.l3	Serious illness, injury or assault of a close relative
+f.6145.0.l3	0f.6145.0.l4	Death of a close relative
+f.6145.0.l4	0f.6145.0.l5	Death of a spouse or partner
+f.6145.0.l5	0f.6145.0.l6	Marital separation/divorce
+f.6145.0.l6	0f.6145.0.l7	Financial difficulties
+f.6145.0.l7	0f.6146.0.l1	None of the above
+f.6146.0.l1	0f.6146.0.l2	Attendance allowance
+f.6146.0.l2	0f.6146.0.l3	Disability living allowance
+f.6146.0.l3	0f.6146.0.l4	Blue badge
+f.6146.0.l4	0
