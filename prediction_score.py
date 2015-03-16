@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[67]:
 
 """
 Program to calculate 5-year risk of mortality.
@@ -208,7 +208,8 @@ def namesnewfun(clean_data):
             names2=names1.split (".", 2)[1]        
         else:
             names2=i
-        namesnew.append(names2)    
+        namesnew.append(names2)
+    assert len(namesnew)==len(names), 'ERROR'
     return namesnew
 
 def list_for_plot(namesnew,LP,var_ann):
@@ -221,6 +222,7 @@ def list_for_plot(namesnew,LP,var_ann):
     '''
     namesnew=np.array(namesnew)
     LP=np.array(LP)
+    assert len(namesnew)==len(LP), 'ERROR'
     unique_namesnew = np.unique(namesnew)
     unique_LP=[]
     for group in unique_namesnew:
@@ -229,17 +231,27 @@ def list_for_plot(namesnew,LP,var_ann):
         Sunique_LP=sorted(unique_LP, key=abs)
     
     ASunique_namesnew=[]
+    # match variable ID with label
     for i in Sunique_namesnew:
         for k,j in enumerate(var_ann['f0']):
             if j==i:
                 ASunique_namesnew.append(var_ann['f1'][k])
-
-    return(ASunique_namesnew,Sunique_LP)    
+    assert len(ASunique_namesnew)==len(Sunique_LP), 'ERROR'
+    return(ASunique_namesnew,Sunique_LP)
 
 
 def plot_tornado(names_to_plot,LP_to_plot,xlabname,titlename,savename,directory,exclude_age='Yes',dpi=100):
     '''
     Function for the tornado plot
+    Arguments:
+        names_to_plot=Labels of y axis
+        LP_to_plot=values x axis
+        xlabname=label x axis
+        titlename=title of the plot
+        savename=file name of the ouput figure .png
+        directory=name of the directory
+        exclude_age= 'Yes' age is not plot, otherwise is plotted. Default 'Yes'
+        dpi=dpi of the output figure. Default 100
     '''
     
     if exclude_age == 'Yes':
@@ -334,7 +346,7 @@ class Predscore_final(object):
         '''
         idx = (np.abs(self.S095[:,1]-(1-self.predscore))).argmin()
         return self.S095[idx,0] 
- 
+
 def show ():
     ''' 
     Function that reads the data and the required files;
@@ -343,11 +355,9 @@ def show ():
     
     # Read data and define main variables
     directory = os.getcwd()
-    #directory = '/Users/AndreaGanna/Documents/Work/Phd_KI/UKbio_mortality/Pgm/test_python'
     assert os.path.isdir(directory), 'ERROR'
     
     fname = directory + '/' + sys.argv[1]
-    #fname = directory + '/answer-h1zUZ3'
     assert os.path.isfile(fname), 'File does not exist'
     
     d = np.loadtxt(fname=fname, delimiter='\t',dtype='S100') # Read external file containing questionnaire results
@@ -363,6 +373,7 @@ def show ():
     fun_to_run = Predscore_final(d,age,sex,directory)
     clean_data=fun_to_run.sex_load() # Clean data
     fun_to_run.assertion_data() # Do tests
+    print 
     
     values_predictions=fun_to_run.calculate_risk()
     predscore=values_predictions[0] # Prediction score
@@ -387,10 +398,13 @@ def show ():
     
     # Below the outputs
     print str(age) + ';' + sex + ';' + str(np.int_(bioage)) + ';' + str(predscore) + ';' + str(riskout) + ';' + str(invriskout)
-    
-    #plot_tornado(names_to_plot=plot_values[0],LP_to_plot=plot_values[1],xlabname='Importance of the question',titlename='Tornado Plot',savename='answer-h1zUZ3',directory=directory)
-    plot_tornado(names_to_plot=plot_values[0],LP_to_plot=plot_values[1],\
-xlabname='Importance of the question',titlename='Tornado Plot',savename=sys.argv[1],directory=directory)
-   
+    plot_tornado(names_to_plot=plot_values[0],LP_to_plot=plot_values[1],xlabname='Importance of the question',titlename='Tornado Plot',savename=sys.argv[1],directory=directory)
+
+
 show()
+
+
+# In[ ]:
+
+
 
