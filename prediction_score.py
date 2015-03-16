@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[125]:
+# In[1]:
 
 """
 Program to calculate 5-year risk of mortality.
@@ -19,17 +19,28 @@ Program to calculate 5-year risk of mortality.
     4. wwFage.csv (weights for females)
     5. MM095.csv (5-year survival probabilities from lifetables, males)
     6. FF095.csv (5-year survival probabilities from lifetables, females)
-
+    7. var_annotation.txt (annotation names for corresponding question ID)
+    
     Returns
     -------
-    1. The predicted risk.
+    1. A string containing the following parameters separated by ;
+        1. Age
+        2. Sex
+        3. UBBLE age
+        4. Predicted risk
+        5. Number of deaths within 100 individuals with same risk profile
+        6. Number of alives within 100 individuals with same risk profile
+    2. A tornado plot containing the contribution of each question to the overall risk
 
 """
 
 import numpy as np
 import math as mt
+import matplotlib.pyplot as plt
+import seaborn as sns
 import sys
 import os.path
+
 
 def skip_d(d):
     '''
@@ -100,7 +111,6 @@ def deal_with_zeros(d):
             x[0] = x[0]
         L1.append(x[1])
         L2.append(x[0])
-
     d=np.column_stack((L2,L1))
     return d
 
@@ -186,8 +196,72 @@ def age_lp(age,coef):
     '''
     return (np.int_(age)-coef[0,][3])*coef[0,][2]
 
+def namesnewfun(clean_data):
+    '''
+    Function to extract the name of the variable even in case of interaction
+    '''
+    names=np.unique(clean_data[:,0])
+    namesnew=[]
+    for i in names:
+        if i[0:3] != 'age':
+            names1=i.translate(None, 'age:')
+            names2=names1.split (".", 2)[1]        
+        else:
+            names2=i
+        namesnew.append(names2)    
+    return namesnew
+
+def list_for_plot(namesnew,LP,var_ann):
+    '''
+    This function has two parts:
+    1. It finds the questions with same ID (normally one with and one without interaction with age) 
+        and sum the linear predictors. Futher, is sort the variables based on abs(value).
+    2. It get the descriptor of the question (from the var_ann file) and match it with the questions ID.
+        This is ueful for the plot.
+    '''
+    namesnew=np.array(namesnew)
+    LP=np.array(LP)
+    unique_namesnew = np.unique(namesnew)
+    unique_LP=[]
+    for group in unique_namesnew:
+        unique_LP.append(LP[namesnew == group].sum())
+        Sunique_namesnew = [i[0] for i in sorted(zip(unique_namesnew, unique_LP), key=lambda l: abs(l[1]))]
+        Sunique_LP=sorted(unique_LP, key=abs)
+    
+    ASunique_namesnew=[]
+    for i in Sunique_namesnew:
+        for k,j in enumerate(var_ann['f0']):
+            if j==i:
+                ASunique_namesnew.append(var_ann['f1'][k])
+
+    return(ASunique_namesnew,Sunique_LP)    
 
 
+def plot_tornado(names_to_plot,LP_to_plot,xlabname,titlename,savename,directory,exclude_age='Yes',dpi=100):
+    '''
+    Function for the tornado plot
+    '''
+    
+    if exclude_age == 'Yes':
+        index_age=names_to_plot.index('Age')
+        del names_to_plot[index_age]
+        del LP_to_plot[index_age]
+        
+    Nnames_to_plot = len(names_to_plot)
+    pos = np.arange(Nnames_to_plot) + .5    # bars centered on the y axis
+    #sns.set_style("dark")
+    
+    #fig = plt.figure(figsize=(5,5))
+    plt.barh(pos, LP_to_plot, align='center', facecolor='cornflowerblue',edgecolor='cornflowerblue')
+    plt.yticks(pos, names_to_plot)
+    plt.xticks([])
+    plt.xlabel(xlabname)
+    plt.suptitle(titlename)
+    plt.figtext(0.15, 0.05, 'Less \n risk')
+    plt.figtext(0.83, 0.05, 'More \n risk')
+    plt.savefig(directory + '/' + savename + '.png', dpi=dpi, bbox_inches='tight')
+    
+    
 class Predscore_final(object):
     
     def __init__ (self, d, age, sex, directory):
@@ -231,11 +305,7 @@ class Predscore_final(object):
         Calculate the individual risk and
         report the largest and smallest linear predictor beside age and age*var interaction
         '''
-        lp_risk=0
-        maxrf = 0
-        minrf = 0
-        maxrfidx = []
-        minrfidx = []
+        LP=[]
         for i in np.unique(self.d[:,0]):
             if i =='age':
                 lp = age_lp(self.age,self.coef)
@@ -244,17 +314,12 @@ class Predscore_final(object):
                 means=reform_array_mean(i, self.coef)
                 pars=reform_array_par(i, self.coef)
                 lp=calculate_lp(pars,means,coefs,i,self.d,self.age)
-            if lp > maxrf and i != 'age' and i[0:5] != 'f.age' : # beside age and age interaction variables
-                maxrf = lp
-                maxrfidx = i
-            if lp < minrf and i != 'age' and i[0:5] != 'f.age' : # beside age and age interaction variables
-                minrf = lp
-                minrfidx = i    
-            lp_risk += lp     
+            LP.append(lp) 
+        lp_risk=sum(LP)    
         w = self.wwage[self.wwage[:,0] == self.age ,1] # Obtain the right weights
         MMt = mt.exp(-self.basehaz * w) # Weight the baseline hazard
         self.predscore = 1-(MMt**mt.exp(lp_risk)) #
-        return (self.predscore,maxrfidx,minrfidx)
+        return (self.predscore,LP)
     
     
     def assertion_data(self):
@@ -276,12 +341,13 @@ def show ():
     run the functions to obtain the predicted score and performs checks
     '''
     
+    # Read data and define main variables
     directory = os.getcwd()
     #directory = '/Users/AndreaGanna/Documents/Work/Phd_KI/UKbio_mortality/Pgm/test_python'
     assert os.path.isdir(directory), 'ERROR'
     
     fname = directory + '/' + sys.argv[1]
-    #fname = directory + '/answer-female'
+    #fname = directory + '/answer-h1zUZ3'
     assert os.path.isfile(fname), 'File does not exist'
     
     d = np.loadtxt(fname=fname, delimiter='\t',dtype='S100') # Read external file containing questionnaire results
@@ -291,21 +357,26 @@ def show ():
     sex=np.str_(d[d[:,0] == ['Sex'],1][0])
     assert sex == 'Male' or sex == 'Female', 'ERROR'
   
+    var_ann=np.loadtxt(fname=directory +'/var_annotation.txt', delimiter='\t',dtype={'names': ('f0', 'f1'),'formats': ('S100', 'S100')}, usecols=(0,1))
+
+    # Define functions and process data
     fun_to_run = Predscore_final(d,age,sex,directory)
+    clean_data=fun_to_run.sex_load() # Clean data
+    fun_to_run.assertion_data() # Do tests
     
-    fun_to_run.sex_load()
-    fun_to_run.assertion_data()
-    
-    predscore=fun_to_run.calculate_risk()[0] 
+    values_predictions=fun_to_run.calculate_risk()
+    predscore=values_predictions[0] # Prediction score
     assert predscore < 1 and predscore > 0, 'ERROR'
     
-    maxlp=fun_to_run.calculate_risk()[1] 
-    minlp=fun_to_run.calculate_risk()[2]
-    
-    bioage=fun_to_run.bioage()
+    bioage=fun_to_run.bioage() # Biological age
     assert bioage > 14 and bioage < 96, 'ERROR'
     
-    risk = np.int_(predscore*100)
+    # The functions below are used for the plot
+    namesnew=namesnewfun(clean_data) # Obtain variables names
+    LP=values_predictions[1] # Obtain standardized linear predictors
+    plot_values=list_for_plot(namesnew,LP,var_ann) # Values for plot
+
+    risk = np.round(np.float_(predscore*100),0)
     invrisk = 100- risk
     if risk < 1:
         riskout = "less than 1"
@@ -313,12 +384,13 @@ def show ():
     else:
         riskout=risk
         invriskout=invrisk
-    print str(age) + ';' + sex + ';' + str(np.int_(bioage)) + ';' + str(predscore) + ';' + maxlp + ';' + minlp+ ';' + str(riskout) + ';' + str(invriskout)
-
-show()    
-
-
-# In[ ]:
-
-
+    
+    # Below the outputs
+    print str(age) + ';' + sex + ';' + str(np.int_(bioage)) + ';' + str(predscore) + ';' + str(riskout) + ';' + str(invriskout)
+    
+    #plot_tornado(names_to_plot=plot_values[0],LP_to_plot=plot_values[1],xlabname='Importance of the question',titlename='Tornado Plot',savename='answer-h1zUZ3',directory=directory)
+    plot_tornado(names_to_plot=plot_values[0],LP_to_plot=plot_values[1],\
+xlabname='Importance of the question',titlename='Tornado Plot',savename=sys.argv[1],directory=directory)
+   
+show()
 
