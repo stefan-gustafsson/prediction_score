@@ -1,6 +1,6 @@
 # prediction_score  
 This folder includes file to run the UBBLE prediction algorithm.  
-1. prediction_score.py: Script to calculate the risk, UBBLE age and produce the tornado plot. The script requires all the file below. The input of the script is the filename of the file containing the answers to the questionnaire.  
+1. prediction_score.py: Script to calculate the risk, UBBLE age and output for the tornado plot. The script requires all the file below. The input of the script is the filename of the file containing the answers to the questionnaire.  
 E.g. python prediction_score.py answer-NZDzmU  
 2. CoefM.txt: coefficients for males  
 3. CoefF.txt: coefficients for females  
