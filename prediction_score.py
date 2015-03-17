@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[67]:
+# In[34]:
 
 """
 Program to calculate 5-year risk of mortality.
@@ -27,17 +27,16 @@ Program to calculate 5-year risk of mortality.
         1. Age
         2. Sex
         3. UBBLE age
-        4. Predicted risk
-        5. Number of deaths within 100 individuals with same risk profile
-        6. Number of alives within 100 individuals with same risk profile
-    2. A tornado plot containing the contribution of each question to the overall risk
+        4. Risk from lifetable corresponding to the real age
+        5. Predicted risk
+        6. Number of deaths within 100 individuals with same risk profile
+        7. Number of alives within 100 individuals with same risk profile
+        8. Values used in the tornado plot with the format 'name variable = sum[beta(x-M)]'
 
 """
 
 import numpy as np
 import math as mt
-import matplotlib.pyplot as plt
-import seaborn as sns
 import sys
 import os.path
 
@@ -212,7 +211,7 @@ def namesnewfun(clean_data):
     assert len(namesnew)==len(names), 'ERROR'
     return namesnew
 
-def list_for_plot(namesnew,LP,var_ann):
+def list_for_plot(namesnew,LP,var_ann,exclude_age):
     '''
     This function has two parts:
     1. It finds the questions with same ID (normally one with and one without interaction with age) 
@@ -236,43 +235,14 @@ def list_for_plot(namesnew,LP,var_ann):
         for k,j in enumerate(var_ann['f0']):
             if j==i:
                 ASunique_namesnew.append(var_ann['f1'][k])
+    # Exclude age is requested
+    if exclude_age == 'Yes':
+        index_age=ASunique_namesnew.index('Age')
+        del ASunique_namesnew[index_age]
+        del Sunique_LP[index_age]
     assert len(ASunique_namesnew)==len(Sunique_LP), 'ERROR'
     return(ASunique_namesnew,Sunique_LP)
 
-
-def plot_tornado(names_to_plot,LP_to_plot,xlabname,titlename,savename,directory,exclude_age='Yes',dpi=100):
-    '''
-    Function for the tornado plot
-    Arguments:
-        names_to_plot=Labels of y axis
-        LP_to_plot=values x axis
-        xlabname=label x axis
-        titlename=title of the plot
-        savename=file name of the ouput figure .png
-        directory=name of the directory
-        exclude_age= 'Yes' age is not plot, otherwise is plotted. Default 'Yes'
-        dpi=dpi of the output figure. Default 100
-    '''
-    
-    if exclude_age == 'Yes':
-        index_age=names_to_plot.index('Age')
-        del names_to_plot[index_age]
-        del LP_to_plot[index_age]
-        
-    Nnames_to_plot = len(names_to_plot)
-    pos = np.arange(Nnames_to_plot) + .5    # bars centered on the y axis
-    #sns.set_style("dark")
-    
-    #fig = plt.figure(figsize=(5,5))
-    plt.barh(pos, LP_to_plot, align='center', facecolor='cornflowerblue',edgecolor='cornflowerblue')
-    plt.yticks(pos, names_to_plot)
-    plt.xticks([])
-    plt.xlabel(xlabname)
-    plt.suptitle(titlename)
-    plt.figtext(0.15, 0.05, 'Less \n risk')
-    plt.figtext(0.83, 0.05, 'More \n risk')
-    plt.savefig(directory + '/' + savename + '.png', dpi=dpi, bbox_inches='tight')
-    
     
 class Predscore_final(object):
     
@@ -343,9 +313,11 @@ class Predscore_final(object):
         '''
         Find closest value to values in array:
         Used to find the biological age
+        Find the risk from lifetables corresponding to the true age
         '''
         idx = (np.abs(self.S095[:,1]-(1-self.predscore))).argmin()
-        return self.S095[idx,0] 
+        realriskage=1-self.S095[self.S095[:,0]==self.age,1]
+        return [self.S095[idx,0],realriskage]
 
 def show ():
     ''' 
@@ -380,12 +352,12 @@ def show ():
     assert predscore < 1 and predscore > 0, 'ERROR'
     
     bioage=fun_to_run.bioage() # Biological age
-    assert bioage > 14 and bioage < 96, 'ERROR'
+    assert bioage[0] > 14 and bioage[0] < 96, 'ERROR'
     
     # The functions below are used for the plot
     namesnew=namesnewfun(clean_data) # Obtain variables names
     LP=values_predictions[1] # Obtain standardized linear predictors
-    plot_values=list_for_plot(namesnew,LP,var_ann) # Values for plot
+    plot_values=list_for_plot(namesnew,LP,var_ann,exclude_age='Yes') # Values for plot
 
     risk = np.round(np.float_(predscore*100),0)
     invrisk = 100- risk
@@ -396,10 +368,10 @@ def show ():
         riskout=risk
         invriskout=invrisk
     
-    # Below the outputs
-    print str(age) + ';' + sex + ';' + str(np.int_(bioage)) + ';' + str(predscore) + ';' + str(riskout) + ';' + str(invriskout)
-    plot_tornado(names_to_plot=plot_values[0],LP_to_plot=plot_values[1],xlabname='Importance of the question',titlename='Tornado Plot',savename=sys.argv[1],directory=directory)
-
+    # Below the output
+    sys.stdout.write(str(age) + ';' + sex + ';' + str(np.int_(bioage[0])) + ';' + str(np.float_(bioage[1])) + ';' + str(predscore) + ';' + str(riskout) + ';' + str(invriskout) + ';')
+    for i in range(1,len(plot_values[0])):
+        sys.stdout.write(plot_values[0][i] + ' = ' + str(plot_values[1][i]) + ';')
 
 show()
 
